@@ -24,7 +24,7 @@ export class IntentiaSkill {
         }
         this.apiKey = config.apiKey;
         // 指向 Intentia 全新生产网关
-        this.endpoint = config.endpoint || "https://intentia-api.onrender.com/v1/audit";
+        this.endpoint = config.endpoint || "https://aegis-api-server.onrender.com/v1/audit";
     }
 
     /**
