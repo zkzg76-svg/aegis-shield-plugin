@@ -1,15 +1,16 @@
 /**
- * 🛡️ Intentia Shield SDK (V2.0)
+ * 🛡️ Intentia Shield SDK (V2.0.0)
+ * * Install: npm install @intentia/shield
  * Usage:
- * const shield = new IntentiaSkill({ apiKey: "INT-XXXX-XXXX" });
- * const decision = await shield.audit("Transfer 10 SOL");
+ * import { IntentiaSkill } from "@intentia/shield";
+ * const intentia = new IntentiaSkill({ apiKey: "INT-XXXX-XXXX" });
+ * const verdict = await intentia.audit("Transfer 10 SOL");
  */
 
 export interface IntentiaVerdict {
     status: "PASS" | "BLOCKED";
     node_id: string;
     reason: string;
-    latency_ms?: number;
 }
 
 export class IntentiaSkill {
@@ -17,36 +18,38 @@ export class IntentiaSkill {
     private endpoint: string;
 
     constructor(config: { apiKey: string, endpoint?: string }) {
-        // 强制检查 Key 格式
+        // 强制检验 Intentia 品牌密钥
         if (!config.apiKey.startsWith("INT-")) {
-            console.warn("⚠️ Warning: Provided key does not follow Intentia naming convention (INT-...).");
+            console.warn("⚠️ Intentia Warning: API Key should start with 'INT-'.");
         }
         this.apiKey = config.apiKey;
-        this.endpoint = config.endpoint || "https://aegis-api-server.onrender.com/v1/audit";
+        // 指向 Intentia 全新生产网关
+        this.endpoint = config.endpoint || "https://intentia-api.onrender.com/v1/audit";
     }
 
     /**
-     * Audit Agent Intent
+     * 对智能体的意图进行安全拦截审查
      */
-    async audit(prompt: string): Promise<IntentiaVerdict> {
+    async audit(intent: string): Promise<IntentiaVerdict> {
         try {
-            const response = await fetch(this.endpoint, {
+            const res = await fetch(this.endpoint, {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${this.apiKey}` 
                 },
-                body: JSON.stringify({ intent: prompt, agent_id: "sdk_client_v2" })
+                body: JSON.stringify({ intent, agent_id: "sdk_client_v2" })
             });
-
-            if (!response.ok) throw new Error(`Intentia API Status: ${response.status}`);
-            return await response.json();
-        } catch (error) {
-            // Fail-Safe: 默认拦截
-            return {
-                status: "BLOCKED",
-                node_id: "INTENTIA-SDK-FAILSAFE",
-                reason: "Audit link interrupted. Transaction suspended for safety."
+            
+            if (!res.ok) throw new Error(`Status: ${res.status}`);
+            return await res.json();
+            
+        } catch (e) {
+            // Fail-Safe: 当底层 API 出现 404/400 时的自愈策略
+            return { 
+                status: "BLOCKED", 
+                node_id: "INTENTIA-FAILSAFE", 
+                reason: "Semantic link to Sovereign Matrix lost. Transaction halted for safety." 
             };
         }
     }
